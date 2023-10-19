@@ -21,3 +21,5 @@ class User(Base):
     updated_time = Column(TIMESTAMP, server_default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
     created = Column(TIMESTAMP, server_default="CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
 
+    def __str__(self):
+        return f"User(id={self.id}, nickname='{self.nickname}', login_name='{self.login_name}', status={self.status})"

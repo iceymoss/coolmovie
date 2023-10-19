@@ -10,3 +10,7 @@ SECRET_KEY = "123456imooc"
 DOMAIN = {
     "www":"http://127.0.0.1:5000"
 }
+
+AUTH_COOKIE_NAME = "coolmovie"
+
+DEBUG_TB_INTERCEPT_REDIRECTS = False
