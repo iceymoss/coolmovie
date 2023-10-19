@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
-from application import app, manager
-from flask_script import Server,Command
-from controllers import index
+from application import manager
+from flask_script import Server
+# from controllers import index
 from www import *
+from jobs.launcher import runJob
+
 
 ##web server
 manager.add_command( "runserver",Server( host = "0.0.0.0",use_debugger=True,use_reloader= True ) )
 
+
+# 启动job
+manager.add_command("runjob", runJob)
 
 
 ##create_table
@@ -20,7 +25,7 @@ manager.add_command( "runserver",Server( host = "0.0.0.0",use_debugger=True,use_
 
 
 def main():
-    app.run()
+    manager.run()
 
 if __name__ == "__main__":
     # app.run( host = "0.0.0.0",debug=True )

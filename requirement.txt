@@ -3,3 +3,7 @@ flask-sqlalchemy
 pymysql
 flask-script
 flask_debugtoolbar
+apscheduler
+Flask-APScheduler
+requests
+BeautifulSoup4
