@@ -2,6 +2,8 @@
 from flask import Flask
 from flask_script import Manager
 import pymysql
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 import os
 
 # from flask_sqlalchemy import SQLAlchemy
@@ -26,3 +28,12 @@ connection = pymysql.connect(
 )
 
 db = connection.cursor()
+
+
+global_db = None
+# 创建数据库连接
+engine = create_engine('mysql+pymysql://root:123456789@127.0.0.1/coolmovie')
+
+# 创建会话
+Session = sessionmaker(bind=engine)
+global_db = Session()
