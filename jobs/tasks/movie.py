@@ -4,9 +4,12 @@ import json
 import os
 import requests
 import time
+import re
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from application import app
+from application import global_db
+from common.models import movie
 
 
 class JobTask():
@@ -36,7 +39,8 @@ class JobTask():
         }
 
         self.getList()
-        self.parseInfo()
+        movies = self.parseInfo()
+        self.sava_db(movies)
 
     # 获取页面，保存到本地
     def getList(self):
@@ -51,7 +55,7 @@ class JobTask():
         path_json = path_root + "/json"
         path_vid = path_root + "/vid"
 
-        print(path_list, path_info, path_json, path_vid)
+        # print(path_list, path_info, path_json, path_vid)
         self.makeSuredirs(path_root)
         self.makeSuredirs(path_list)
         self.makeSuredirs(path_info)
@@ -116,7 +120,7 @@ class JobTask():
         tmp_soup = BeautifulSoup(str(content), "html.parser")
 
         tmp_list = tmp_soup.select('div.mo-cols-lays.mo-back-white.mo-part-round ul li')
-        print("电影总数：", len(tmp_list))
+        # print("电影总数：", len(tmp_list))
         for tmp_item in tmp_list:
 
             # 找到电影名称，使用CSS选择器
@@ -124,21 +128,20 @@ class JobTask():
             act_list = tmp_item.select(
                 "span.mo-situ-desc.mo-fsxs-12px.mo-wrap-arow.mo-text-muted.mo-coxs-none.mo-comd-block")
             if len(tage) == 0 or len(act_list) == 0:
-                print("解析失败")
+                # print("解析失败")
                 continue
 
             name = tage[0].text
-            print("电影名称:", name)
+            # print("电影名称:", name)
 
             href = tage[0]['href']
             if "http:" not in href:
                 href = "https://www.bttian.com" + href
-                print("链接:", href)
+                # print("链接:", href)
 
             # 演员
-            act = act_list[0].text
-            print(act)
-
+            act = act_list[0].text.replace("主演: ", "")
+            print("主演：", act)
             tmp_data = {
                 "name": name,
                 "url": href,
@@ -152,6 +155,7 @@ class JobTask():
 
     # 解析详细信息
     def parseInfo(self):
+        data = []
         config = self.url
         path_root = config["save_path"] + str(datetime.date.today())
         path_info = path_root + "/info"
@@ -166,55 +170,89 @@ class JobTask():
             tmp_data = json.loads(self.getContent(tmp_json_path))
             tmp_content = self.getContent(tmp_info_path)
 
-            print("--------------------")
-            print("数据：", tmp_data)
-            print("--------------------")
+            # print("--------------------")
+            # print("数据：", tmp_data)
+            # print("--------------------")
 
             soup_movie = BeautifulSoup(tmp_content, "html.parser")
             try:
                 file_url1 = soup_movie.select("img.mo-part-pics")
                 url1 = file_url1[0]["src"]
-                print("封面:", url1)
-                tmp_data["封面"] = url1
+                # print("封面:", url1)
+                tmp_data["cover"] = url1
 
                 file_url2 = soup_movie.select("a.mo-deta-play.mo-mrxs-10px.mo-part-btns.mo-lhxs-34px.mo-bord-round.mo-back-mojia.mo-cols-info")
                 if len(file_url2) >= 2:
                     if file_url2[0]["href"]:
                         url2_1 = "https://www.bttian.com" + file_url2[0]["href"]
-                        print("播放地址:", url2_1)
-                        tmp_data["播放地址"] = url2_1
+                        # print("播放地址:", url2_1)
+                        tmp_data["play_address"] = url2_1
 
                     if file_url2[1]["href"]:
                         url2_2 = "https://www.bttian.com" + file_url2[1]["href"]
-                        print("下载地址:", url2_2)
-                        tmp_data["下载地址"] = url2_2
+                        # print("下载地址:", url2_2)
+                        tmp_data["download_address"] = url2_2
+
+                        download = self.getHttpContent(url2_2)
+                        download_soup = BeautifulSoup(str(download), "html.parser")
+                        dl_info = download_soup.select("input.mo-down-copy.mo-down-copy1.mo-form-info.mo-bord-round.mo-bord-muted.mo-back-muted.mo-cols-info.mo-cols-xs12.mo-pnxs-10px.mo-coxs-left")
+                        dl_video = dl_info[0].get("value")
+
+                        arr = dl_video.split("thunder")
+                        download_bt ="thunder"+str(arr[1])
+                        tmp_data["BT_address"] = download_bt
 
                 catg_country = soup_movie.select("li.mo-cols-info.mo-cols-xs6.mo-cols-md3.mo-fsxs-14px.mo-wrap-arow.mo-ptxs-5px a")
-                print("类别：", catg_country[0].text)
-                print("国家：", catg_country[1].text)
+                # print("类别：", catg_country[0].text)
+                # print("国家：", catg_country[1].text)
 
-                tmp_data["类别"] = catg_country[0].text
-                tmp_data["国家"] = catg_country[1].text
+                tmp_data["category"] = catg_country[0].text
+                tmp_data["country"] = catg_country[1].text
 
                 yaer = soup_movie.select("li.mo-cols-info.mo-cols-xs6.mo-cols-md3.mo-fsxs-14px.mo-wrap-arow.mo-ptxs-5px.mo-coxs-none.mo-coss-block a")
-                print("年份：", yaer[0].text)
+                # print("年份：", yaer[0].text)
 
-                tmp_data["年份"] = yaer[0].text
+                tmp_data["year"] = yaer[0].text
 
                 dirc = soup_movie.select("li.mo-cols-info.mo-cols-xs12.mo-ptxs-5px.mo-fsxs-14px.mo-lhxs-20px.mo-lhxl-24px.mo-coxs-none.mo-comd-block.mo-text-muted")
-                print(dirc[0].text)
+                # print(dirc[0].text)
 
-                tmp_data["短语"] = dirc[0].text.replace("短评：", "")
+                tmp_data["review"] = dirc[0].text.replace("短评：", "")
 
-                print("----------------------------------------------------")
-                print("数据：", tmp_data)
-
-                print("----------------------------------------------------")
+                data.append(tmp_data)
 
             except:
                 continue
-        return True
+        return data
 
+  # 电影数据入库
+    def sava_db(self, data):
+        movies = []
+        # 实例化movie
+        for d in data:
+            m = movie.Movie()
+            m.name = d.get("name", "unknown")
+            m.url = d.get("url", "unknown")
+            m.actor = d.get("act", "unknown")
+            m.hash = d.get("hash", "unknown")
+            m.cover_pic = d.get("cover", "unknown")
+            m.play_url = d.get("play_address", "unknown")
+            m.download_url = d.get("download_address", "unknown")
+            m.magnet_url = d.get("BT_address", "unknown")
+            m.classify = d.get("category", "unknown")
+            m.country = d.get("country", "unknown")
+            m.pub_date = d.get("year", "unknown")
+            m.description = d.get("review", "unknown")
+            movies.append(m)
+
+        print("----------写入数据库中-----------")
+        global_db.add_all(movies)
+
+        # 提交会话以保存更改
+        global_db.commit()
+
+        # 关闭会话
+        global_db.close()
 
     # 获取请求内容
     def getHttpContent(self, url):
@@ -251,89 +289,3 @@ class JobTask():
     def makeSuredirs(self, path):
         if not os.path.exists(path):
             os.makedirs(path)
-
-    #
-    # def run(self, parmas):
-    #     print("hello, job")
-    #
-    #     # url_list = ["https://www.bttian.com/show/dongzuopian--------1---.html"]
-    #
-    #
-    #     for i in range(1,10):
-    #         print("===================================================")
-    #         print(i)
-    #         print("===================================================")
-    #
-    #         url = "https://www.bttian.com/show/dongzuopian--------"+str(i)+"---.html"
-    #
-    #         headers = {
-    #             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
-    #         }
-    #         resp = requests.get(url, headers=headers)
-    #
-    #         soup = BeautifulSoup(resp.content, "html.parser")
-    #         # items = soup.select("div.mo-cols-lays ul li")
-    #
-    #         movie_divs = soup.select('div.mo-cols-lays.mo-back-white.mo-part-round ul li')
-    #         # print(len(movie_divs))
-    #
-    #         # 遍历每个包含电影信息的div元素
-    #         for movie_div in movie_divs:
-    #             # 找到电影名称，使用CSS选择器
-    #             tage = movie_div.select("a.mo-situ-name.mo-fsxs-14px.mo-coxs-center.mo-comd-left.mo-wrap-arow")
-    #             act_list = movie_div.select(
-    #                 "span.mo-situ-desc.mo-fsxs-12px.mo-wrap-arow.mo-text-muted.mo-coxs-none.mo-comd-block")
-    #             # print(tage)
-    #             # print(len(tage))
-    #             # print(act_list)
-    #             # print("")
-    #             if len(tage) == 0 or len(act_list) == 0:
-    #                 continue
-    #
-    #             name = tage[0].text
-    #             print("电影名称:", name)
-    #
-    #             href = tage[0]['href']
-    #             print("链接:", "https://www.bttian.com" + href)
-    #
-    #             # 演员
-    #             act = act_list[0].text
-    #             print(act)
-    #
-    #
-    #             # 获取详细信息
-    #             href_info = "https://www.bttian.com" + href
-    #             resp_movie = requests.get(href_info, headers=headers)
-    #             # print(resp_movie.content)
-    #             soup_movie = BeautifulSoup(resp_movie.content, "html.parser")
-    #
-    #             file_url1 = soup_movie.select("img.mo-part-pics")
-    #             url1 = file_url1[0]["src"]
-    #             print("封面:", url1)
-    #
-    #             file_url2 = soup_movie.select(
-    #                 "a.mo-deta-play.mo-mrxs-10px.mo-part-btns.mo-lhxs-34px.mo-bord-round.mo-back-mojia.mo-cols-info")
-    #             if len(file_url2) >= 2:
-    #                 if file_url2[0]["href"]:
-    #                     url2_1 = "https://www.bttian.com" + file_url2[0]["href"]
-    #                     print("播放地址:", url2_1)
-    #
-    #                 if file_url2[1]["href"]:
-    #                     url2_2 = "https://www.bttian.com" + file_url2[1]["href"]
-    #                     print("下载地址:", url2_2)
-    #
-    #             catg_country = soup_movie.select(
-    #                 "li.mo-cols-info.mo-cols-xs6.mo-cols-md3.mo-fsxs-14px.mo-wrap-arow.mo-ptxs-5px a")
-    #             print("类别：", catg_country[0].text)
-    #             print("国家：", catg_country[1].text)
-    #
-    #             yaer = soup_movie.select(
-    #                 "li.mo-cols-info.mo-cols-xs6.mo-cols-md3.mo-fsxs-14px.mo-wrap-arow.mo-ptxs-5px.mo-coxs-none.mo-coss-block a")
-    #             print("年份：", yaer[0].text)
-    #
-    #             dirc = soup_movie.select(
-    #                 "li.mo-cols-info.mo-cols-xs12.mo-ptxs-5px.mo-fsxs-14px.mo-lhxs-20px.mo-lhxl-24px.mo-coxs-none.mo-comd-block.mo-text-muted")
-    #             print(dirc[0].text)
-    #
-    #             print("--------------------------")
-    #
