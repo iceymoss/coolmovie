@@ -4,7 +4,6 @@ import json
 import os
 import requests
 import time
-import re
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from application import app
@@ -15,13 +14,9 @@ from common.models import movie
 class JobTask():
 
     def __int__(self):
-        self.source = "bttian"
-        self.url = {
-            "num": 3,
-            "url": "https://www.bttian.com/show/dongzuopian--------#d#---.html",
-            "save_path": "/tmp/%/" % (self.source),
-        }
-        self.date = datetime.date.today()
+        self.source
+        self.url = {}
+        self.date
 
     def run(self, parmas):
         self.source = "bttian"
@@ -230,6 +225,13 @@ class JobTask():
         movies = []
         # 实例化movie
         for d in data:
+
+            # 检查是是否重复
+            has_movie = global_db.query(movie.Movie).filter_by(hash=d.get("hash", "")).first()
+            if has_movie:
+                print("该电影已经存在")
+                continue
+
             m = movie.Movie()
             m.name = d.get("name", "unknown")
             m.url = d.get("url", "unknown")
@@ -243,9 +245,9 @@ class JobTask():
             m.country = d.get("country", "unknown")
             m.pub_date = d.get("year", "unknown")
             m.description = d.get("review", "unknown")
+
             movies.append(m)
 
-        print("----------写入数据库中-----------")
         global_db.add_all(movies)
 
         # 提交会话以保存更改
@@ -253,6 +255,7 @@ class JobTask():
 
         # 关闭会话
         global_db.close()
+        print("----------写入数据库完成-----------")
 
     # 获取请求内容
     def getHttpContent(self, url):
