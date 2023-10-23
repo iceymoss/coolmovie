@@ -1,21 +1,25 @@
 {% extends "common/layout.html" %}
 {% block content %}
-hello I Love Imooc
-<p>var name = {{ name }}</p>
-<p>
-{#    {% if user %}#}
-{#    {{ user.nickname }} 联系QQ:{{  user.qq }} 主页:{{ user.home_page }}#}
-{#    {% endif %}#}
-</p>
-<p>
-{#    {% for tmp_num in num_list %}#}
-{#    {{ tmp_num }}#}
-{#    {% endfor %}#}
-</p>
-<p> flask 查询数据库</p>
-<p>
-{#    {% for item in result %}#}
-{#    {{ item['User'] }}#}
-{#    {% endfor %}#}
-</p>
+    <div class="row">
+        <div class="col-lg-12">
+        排序： <a href="/?order=lastest" class="btn btn-link">最新</a> <a href="/?order=hot" class="btn btn-link">热门</a>
+        </div>
+    </div>
+    <div class="row" style="margin:10px 0 ;">
+    {% if data %}
+    {% for item in data %}
+    <div class="col-md-2">
+        <a  class="thumbnail" href="{{ '%s?id=%s' | format( '/info', item.id) }}">
+            <img style="width: 100%;height:260px; " src="{{ item.cover_pic | safe }}">
+            <div class="caption">
+                <h3 style="overflow: hidden;text-overflow: ellipsis;display:-webkit-box;-webkit-box-orient: vertical;-webkit-line-clamp:1;">
+                    {{ item.name | safe }}</h3>
+                <p>{{ item.country | safe }} | {{ item.pub_date | safe }} | {{ item.view_counter | safe }}</p>
+            </div>
+        </a>
+    </div>
+    {% endfor %}
+    {% endif %}
+</div>
+{% include '/common/pagenation.html' %}
 {% endblock %}
