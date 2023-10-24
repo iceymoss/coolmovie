@@ -7,3 +7,4 @@ apscheduler
 Flask-APScheduler
 requests
 BeautifulSoup4
+uwsgi

@@ -6,29 +6,19 @@ from www import *
 from jobs.launcher import runJob
 
 
-##web server
+# web server: python3 manager.py runserver
 manager.add_command( "runserver",Server( host = "0.0.0.0",use_debugger=True,use_reloader= True, port=3000 ) )
 
 
-# 启动job
+# 启动job任务: python3 manager.py runjob -m movie
 manager.add_command("runjob", runJob)
-
-
-##create_table
-# @Command
-# def create_all():
-#     from application import db
-#     from common.models.user import User
-#     db.create_all()
-#
-# manager.add_command( "create_all",create_all )
 
 
 def main():
     manager.run()
 
+
 if __name__ == "__main__":
-    # app.run( host = "0.0.0.0",debug=True )
     try:
         import sys
         sys.exit( main() )

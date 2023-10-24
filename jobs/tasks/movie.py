@@ -21,7 +21,7 @@ class JobTask():
     def run(self, parmas):
         self.source = "bttian"
         self.url = {
-            "num": 1,
+            "num": 3,
             "url": "https://www.bttian.com/show/dongzuopian--------#d#---.html",
             "save_path": "tmp/" + self.source + "/",
         }
